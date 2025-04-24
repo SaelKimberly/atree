@@ -1,3 +1,5 @@
+#![no_std]
+#![deny(unused_imports, dead_code, clippy::panic, clippy::unwrap_used)]
 #![doc(html_root_url = "https://docs.rs/atree/0.5.2")]
 //! An arena based tree structure, backed by a custom allocator (ultimately
 //! built on `Vec`) that makes node removal a possibility. On top of the basic
@@ -56,8 +58,9 @@
 //! use atree::Arena;
 //!
 //! let data = "Indo-European";
-//! let (mut arena, token) = Arena::with_data(data);
-//! assert_eq!(arena.node_count(), 1)
+//! let (mut arena, token) = Arena::with_data(data)?;
+//! assert_eq!(arena.node_count(), 1);
+//! # Ok::<(), atree::Error>(())
 //! ```
 //!
 //! To add more data to the tree, call the [`append`] method on the tokens (we
@@ -67,9 +70,10 @@
 //! use atree::Arena;
 //!
 //! let root_data = "Indo-European";
-//! let (mut arena, root_token) = Arena::with_data(root_data);
-//! root_token.append(&mut arena, "Romance");
+//! let (mut arena, root_token) = Arena::with_data(root_data)?;
+//! root_token.append(&mut arena, "Romance")?;
 //! assert_eq!(arena.node_count(), 2);
+//! # Ok::<(), atree::Error>(())
 //! ```
 //!
 //! To access/modify existing nodes in the tree, we can use indexing or
@@ -78,15 +82,15 @@
 //! use atree::Arena;
 //!
 //! let root_data = "Indo-European";
-//! let (mut arena, root_token) = Arena::with_data(root_data);
+//! let (mut arena, root_token) = Arena::with_data(root_data)?;
 //!
 //! // add some more stuff to the tree
-//! let branch1 = root_token.append(&mut arena, "Romance");
-//! let branch2 = root_token.append(&mut arena, "Germanic");
-//! let branch3 = root_token.append(&mut arena, "Slavic");
-//! let lang1 = branch2.append(&mut arena, "English");
-//! let lang2 = branch2.append(&mut arena, "Swedish");
-//! let lang3 = branch3.append(&mut arena, "Polish");
+//! let branch1 = root_token.append(&mut arena, "Romance")?;
+//! let branch2 = root_token.append(&mut arena, "Germanic")?;
+//! let branch3 = root_token.append(&mut arena, "Slavic")?;
+//! let lang1 = branch2.append(&mut arena, "English")?;
+//! let lang2 = branch2.append(&mut arena, "Swedish")?;
+//! let lang3 = branch3.append(&mut arena, "Polish")?;
 //!
 //! // Access data by indexing the arena by a token. This operation panics if the
 //! // token is invalid.
@@ -105,6 +109,7 @@
 //! // have the node
 //! let branch3_node = &arena[branch3];
 //! assert_eq!(branch3, branch3_node.token());
+//! # Ok::<(), atree::Error>(())
 //! ```
 //!
 //! We can iterate over the elements by calling iterators on both the tokens
@@ -115,60 +120,59 @@
 //! use atree::Arena;
 //!
 //! let root_data = "Indo-European";
-//! let (mut arena, root_token) = Arena::with_data(root_data);
+//! let (mut arena, root_token) = Arena::with_data(root_data)?;
 //!
 //! // add some more stuff to the tree
-//! let branch1 = root_token.append(&mut arena, "Romance");
-//! let branch2 = root_token.append(&mut arena, "Germanic");
-//! let branch3 = root_token.append(&mut arena, "Slavic");
-//! let lang1 = branch2.append(&mut arena, "English");
-//! let lang2 = branch2.append(&mut arena, "Swedish");
-//! let lang3 = branch3.append(&mut arena, "Polish");
+//! let branch1 = root_token.append(&mut arena, "Romance")?;
+//! let branch2 = root_token.append(&mut arena, "Germanic")?;
+//! let branch3 = root_token.append(&mut arena, "Slavic")?;
+//! let lang1 = branch2.append(&mut arena, "English")?;
+//! let lang2 = branch2.append(&mut arena, "Swedish")?;
+//! let lang3 = branch3.append(&mut arena, "Polish")?;
 //!
 //! // Getting an iterator from a token and iterate
-//! let children: Vec<_> = root_token.children(&arena).map(|x| x.data).collect();
+//! let children: Vec<_> = root_token.children(&arena)?.map(|x| x.data).collect();
 //! assert_eq!(&["Romance", "Germanic", "Slavic"], &children[..]);
 //!
 //! // Getting an iterator from a node reference (that is if you already have it
 //! // around. To go out of your way to get the node reference before getting
 //! // the iterator seems kind of dumb).
 //! let polish = &arena[lang3];
-//! let ancestors: Vec<_> = polish.ancestors(&arena).map(|x| x.data).collect();
+//! let ancestors: Vec<_> = polish.ancestors(&arena)?.map(|x| x.data).collect();
 //! assert_eq!(&["Slavic", "Indo-European"], &ancestors[..]);
 //!
 //! // We can also iterate mutably. Unfortunately we can only get mutable
 //! // iterators from the tokens but not from the node references because of
 //! // borrow checking.
-//! for lang in branch2.children_mut(&mut arena) {
+//! for lang in branch2.children_mut(&mut arena)? {
 //!     lang.data = "Not romantic enough";
 //! }
 //! assert_eq!(arena[lang1].data, "Not romantic enough");
 //! assert_eq!(arena[lang2].data, "Not romantic enough");
+//! # Ok::<(), atree::Error>(())
 //! ```
 //!
 //! To remove a single node from the arena, use the [`remove`] method. This will
 //! detach all the children of the node from the tree (but not remove them from
 //! memory).
 //! ```
-//! use atree::Arena;
-//! use atree::iter::TraversalOrder;
+//! use atree::{Arena, iter::TraversalOrder};
 //!
 //! // root node that we will attach subtrees to
 //! let root_data = "Indo-European";
-//! let (mut arena, root) = Arena::with_data(root_data);
+//! let (mut arena, root) = Arena::with_data(root_data)?;
 //!
 //! // the Germanic branch
-//! let germanic = root.append(&mut arena, "Germanic");
-//! let west = germanic.append(&mut arena, "West");
-//! let scots = west.append(&mut arena, "Scots");
-//! let english = west.append(&mut arena, "English");
+//! let germanic = root.append(&mut arena, "Germanic")?;
+//! let west = germanic.append(&mut arena, "West")?;
+//! let scots = west.append(&mut arena, "Scots")?;
+//! let english = west.append(&mut arena, "English")?;
 //!
 //! // detach the west branch from the main tree
-//! let west_children = arena.remove(west);
+//! let west_children = arena.remove(west)?;
 //!
 //! // the west branch is gone from the original tree
-//! let mut iter = root.subtree(&arena, TraversalOrder::Pre)
-//!     .map(|x| x.data);
+//! let mut iter = root.subtree(&arena, TraversalOrder::Pre).map(|x| x.data);
 //! assert_eq!(iter.next(), Some("Indo-European"));
 //! assert_eq!(iter.next(), Some("Germanic"));
 //! assert!(iter.next().is_none());
@@ -178,6 +182,7 @@
 //! assert_eq!(iter.next(), Some("Scots"));
 //! assert_eq!(iter.next(), Some("English"));
 //! assert!(iter.next().is_none());
+//! # Ok::<(), atree::Error>(())
 //! ```
 //!
 //! To uproot a tree from the arena, call the [`uproot`] method on the arena.
@@ -187,19 +192,20 @@
 //! use atree::Arena;
 //!
 //! let root_data = "Indo-European";
-//! let (mut arena, root_token) = Arena::with_data(root_data);
+//! let (mut arena, root_token) = Arena::with_data(root_data)?;
 //!
 //! // add some more stuff to the tree
-//! let branch1 = root_token.append(&mut arena, "Romance");
-//! let branch2 = root_token.append(&mut arena, "Germanic");
-//! let branch3 = root_token.append(&mut arena, "Slavic");
-//! let lang1 = branch2.append(&mut arena, "English");
-//! let lang2 = branch2.append(&mut arena, "Swedish");
-//! let lang3 = branch3.append(&mut arena, "Polish");
+//! let branch1 = root_token.append(&mut arena, "Romance")?;
+//! let branch2 = root_token.append(&mut arena, "Germanic")?;
+//! let branch3 = root_token.append(&mut arena, "Slavic")?;
+//! let lang1 = branch2.append(&mut arena, "English")?;
+//! let lang2 = branch2.append(&mut arena, "Swedish")?;
+//! let lang3 = branch3.append(&mut arena, "Polish")?;
 //!
 //! assert_eq!(arena.node_count(), 7);
-//! arena.uproot(branch2);  // boring languages anyway
+//! arena.uproot(branch2); // boring languages anyway
 //! assert_eq!(arena.node_count(), 4);
+//! # Ok::<(), atree::Error>(())
 //! ```
 //!
 //! [`Arena<T>`]: struct.Arena.html
@@ -211,24 +217,16 @@
 //! [`get_mut`]: struct.Arena.html#method.get_mut
 //! [`uproot`]: struct.Arena.html#method.uproot
 //! [`remove`]: struct.Arena.html#method.remove
-
-#[cfg(feature = "serde")]
 #[macro_use]
-extern crate serde;
+extern crate alloc;
 
-mod alloc;
+mod allocator;
 mod arena;
+pub mod err;
 pub mod iter;
 mod node;
 mod token;
-
+pub use self::err::{Error, Result};
 pub use arena::Arena;
 pub use node::Node;
 pub use token::Token;
-
-#[derive(Clone, Copy, Debug)]
-/// The Error type
-pub enum Error {
-    /// Not a root node error
-    NotARootNode,
-}

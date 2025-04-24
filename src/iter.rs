@@ -1,12 +1,11 @@
-#![allow(clippy::match_bool)]
 //! A module that contains different kinds of iterators.
-use std::collections::VecDeque;
-use std::marker::PhantomData;
-use std::mem;
+use alloc::collections::VecDeque;
+use core::marker::PhantomData;
+use core::mem;
 
-use crate::Arena;
 use crate::node::Node;
 use crate::token::Token;
+use crate::{Arena, Error, Result};
 
 /// A flag for the branch the next iteration should take when traversing the
 /// tree. See [`preorder_next`] and [`postorder_next`] for usage.
@@ -43,27 +42,24 @@ pub(crate) fn preorder_next<T>(
     root: Token,
     mut branch: Branch,
     arena: &Arena<T>,
-) -> (Option<Token>, Branch) {
+) -> Result<(Option<Token>, Branch)> {
     loop {
-        let node = match arena.get(node_token) {
-            Some(n) => n,
-            None => panic!("Invalid token"),
-        };
+        let node = arena.get(node_token)?;
         match branch {
-            Branch::None => panic!("Unreachable arm. Check code."), // unreachable
+            Branch::None => unreachable!(), // unreachable
             Branch::Child => match node.first_child {
-                Some(token) => break (Some(token), Branch::Child),
+                Some(token) => break Ok((Some(token), Branch::Child)),
                 None => match node_token == root {
-                    true => break (None, Branch::None),
+                    true => break Ok((None, Branch::None)),
                     false => branch = Branch::Sibling,
                 },
             },
             Branch::Sibling => match node.next_sibling {
-                Some(token) => break (Some(token), Branch::Child),
+                Some(token) => break Ok((Some(token), Branch::Child)),
                 None => match node.parent {
-                    None => break (None, Branch::None),
+                    None => break Ok((None, Branch::None)),
                     Some(parent) => match parent == root {
-                        true => break (None, Branch::None),
+                        true => break Ok((None, Branch::None)),
                         false => {
                             node_token = parent;
                             branch = Branch::Sibling;
@@ -84,24 +80,21 @@ pub(crate) fn postorder_next<T>(
     root: Token,
     mut branch: Branch,
     arena: &Arena<T>,
-) -> (Option<Token>, Branch) {
+) -> Result<(Option<Token>, Branch)> {
     let mut switch_branch = true;
     loop {
-        let node = match arena.get(node_token) {
-            Some(n) => n,
-            None => panic!("Invalid token"),
-        };
+        let node = arena.get(node_token)?;
         match branch {
-            Branch::None => break (None, Branch::None),
+            Branch::None => break Ok((None, Branch::None)),
             Branch::Child => match node.first_child {
                 Some(token) => {
                     node_token = token;
                     switch_branch = false;
                 }
                 None => match switch_branch {
-                    false => break (Some(node_token), Branch::Sibling),
+                    false => break Ok((Some(node_token), Branch::Sibling)),
                     true => match node_token == root {
-                        true => break (Some(root), Branch::None), // no descendants
+                        true => break Ok((Some(root), Branch::None)), // no descendants
                         false => branch = Branch::Sibling,
                     },
                 },
@@ -113,10 +106,10 @@ pub(crate) fn postorder_next<T>(
                     branch = Branch::Child;
                 }
                 None => match node.parent {
-                    None => break (None, Branch::Child),
+                    None => break Ok((None, Branch::Child)),
                     Some(parent) => match parent == root {
-                        true => break (Some(root), Branch::None),
-                        false => break (Some(parent), Branch::Sibling),
+                        true => break Ok((Some(root), Branch::None)),
+                        false => break Ok((Some(parent), Branch::Sibling)),
                     },
                 },
             },
@@ -132,22 +125,20 @@ pub(crate) fn postorder_next<T>(
 #[allow(clippy::type_complexity)]
 pub(crate) fn depth_first_tokens_next<'a, T>(
     iter: &mut SubtreeTokens<'a, T>,
-    func: fn(Token, Token, Branch, &Arena<T>) -> (Option<Token>, Branch),
-) -> Option<Token> {
+    func: fn(Token, Token, Branch, &Arena<T>) -> Result<(Option<Token>, Branch)>,
+) -> Result<Option<Token>> {
     match iter.node_token {
-        None => None,
+        None => Ok(None),
         Some(token) => match iter.arena.get(token) {
-            None => panic!(
-                "Stale token: {:?} is not found in \
-                            the arena. Check code",
-                token
-            ),
-            Some(_) => {
-                let (next_node, branch) = func(token, iter.subtree_root, iter.branch, iter.arena);
-                iter.node_token = next_node;
-                iter.branch = branch;
-                Some(token)
-            }
+            Err(_) => Err(Error::StaleToken(token)),
+            Ok(_) => match func(token, iter.subtree_root, iter.branch, iter.arena) {
+                Ok((next_node, branch)) => {
+                    iter.node_token = next_node;
+                    iter.branch = branch;
+                    Ok(Some(token))
+                }
+                Err(e) => Err(e),
+            },
         },
     }
 }
@@ -157,17 +148,19 @@ pub(crate) fn depth_first_tokens_next<'a, T>(
 ///
 /// [`subtree_tokens`]: ../struct.Token.html#method.subtree_tokens
 /// [`SubtreeTokens`]: struct.SubtreeTokens.html
-pub(crate) fn breadth_first_tokens_next<'a, T>(iter: &mut SubtreeTokens<'a, T>) -> Option<Token> {
+pub(crate) fn breadth_first_tokens_next<'a, T>(
+    iter: &mut SubtreeTokens<'a, T>,
+) -> Result<Option<Token>> {
     match iter.curr_level.pop_front() {
         Some(token) => {
-            iter.next_level.extend(token.children_tokens(iter.arena));
-            Some(token)
+            iter.next_level.extend(token.children_tokens(iter.arena)?);
+            Ok(Some(token))
         }
         None => match iter.next_level.is_empty() {
-            true => None,
+            true => Ok(None),
             false => {
                 mem::swap(&mut iter.curr_level, &mut iter.next_level);
-                iter.next()
+                Ok(iter.next())
             }
         },
     }
@@ -187,13 +180,16 @@ pub struct SubtreeTokens<'a, T> {
     pub(crate) branch: Branch,
     pub(crate) curr_level: VecDeque<Token>,
     pub(crate) next_level: VecDeque<Token>,
-    pub(crate) next: fn(&mut SubtreeTokens<'a, T>) -> Option<Token>,
+    pub(crate) next: fn(&mut SubtreeTokens<'a, T>) -> Result<Option<Token>>,
 }
 
 impl<'a, T> Iterator for SubtreeTokens<'a, T> {
     type Item = Token;
-    fn next(&mut self) -> Option<Token> {
-        (self.next)(self)
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.next)(self) {
+            Ok(Some(token)) => Some(token),
+            _ => None,
+        }
     }
 }
 
@@ -213,8 +209,8 @@ impl<'a, T> Iterator for Subtree<'a, T> {
     type Item = &'a Node<T>;
     fn next(&mut self) -> Option<&'a Node<T>> {
         match self.iter.next() {
-            Some(node_token) => self.arena.get(node_token),
-            None => None,
+            Some(node_token) => self.arena.get(node_token).ok(),
+            _ => None,
         }
     }
 }
@@ -237,11 +233,12 @@ impl<'a, T> Iterator for SubtreeMut<'a, T> {
         match self.iter.next() {
             None => None,
             Some(node_token) => {
-                let arena = unsafe { self.arena.as_mut().unwrap() };
-                match arena.get_mut(node_token) {
-                    Some(node) => Some(node),
-                    None => None,
-                }
+                let arena = unsafe {
+                    self.arena
+                        .as_mut()
+                        .expect("Arena pointer should not be null")
+                };
+                arena.get_mut(node_token).ok()
             }
         }
     }
@@ -396,16 +393,16 @@ macro_rules! iterator {
     (@token struct $name:ident > $field:ident) => {
         impl<'a, T> Iterator for $name<'a, T> {
             type Item = Token;
-            fn next(&mut self) -> Option<Token> {
+            fn next(&mut self) -> Option<Self::Item> {
                 match self.node_token {
                     None => None,
                     Some(token) => match self.arena.get(token) {
-                        None => panic!(
+                        Err(_) => panic!(
                             "Stale token: {:?} is not found in \
                                         the arena. Check code",
                             token
                         ),
-                        Some(curr_node) => {
+                        Ok(curr_node) => {
                             self.node_token = curr_node.$field;
                             Some(token)
                         }
@@ -423,7 +420,7 @@ macro_rules! iterator {
             type Item = &'a Node<T>;
             fn next(&mut self) -> Option<&'a Node<T>> {
                 match self.token_iter.next() {
-                    Some(node_token) => self.token_iter.arena.get(node_token),
+                    Some(node_token) => self.token_iter.arena.get(node_token).ok(),
                     None => None,
                 }
             }
@@ -438,13 +435,10 @@ macro_rules! iterator {
                     None => None,
                     Some(curr_node_token) => {
                         let arena = unsafe { self.arena.as_mut().unwrap() };
-                        match arena.get_mut(curr_node_token) {
-                            None => None,
-                            Some(curr_node) => {
-                                self.node_token = curr_node.$field;
-                                Some(curr_node)
-                            }
-                        }
+                        arena.get_mut(curr_node_token).ok().and_then(|curr_node| {
+                            self.node_token = curr_node.$field;
+                            Some(curr_node)
+                        })
                     }
                 }
             }

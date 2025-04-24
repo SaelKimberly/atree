@@ -1,18 +1,30 @@
 [package]
 name = "atree"
-version = "0.5.2"                                                  # remember to update html_root_url
-authors = ["Mac Lee <macthecadillac@gmail.com>"]
+version = "0.6.0" # remember to update html_root_url
+authors = [
+    "Mac Lee <macthecadillac@gmail.com>",
+    "SaelKimberly <sael.kimberly@yandex.ru>",
+]
 edition = "2024"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/macthecadillac/atree"
 homepage = "https://github.com/macthecadillac/atree"
-description = "An arena based tree structure with removal support"
+description = "An no_std arena based tree structure with removal support"
 documentation = "https://docs.rs/atree"
 rust-version = "1.86.0"
+
 categories = ["data-structures"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0", optional = true }
+serde = { version = "^1.0", optional = true, default-features = false, features = [
+    "alloc",
+    "derive",
+] }
+thiserror = { version = "^2.0", default-features = false }
+hashbrown = { version = "^0.15", default-features = false, features = [
+    "alloc",
+    "default-hasher",
+] }
