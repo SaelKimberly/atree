@@ -222,13 +222,13 @@ pub mod iter;
 mod node;
 mod token;
 
-pub use token::Token;
 pub use arena::Arena;
 pub use node::Node;
+pub use token::Token;
 
 #[derive(Clone, Copy, Debug)]
 /// The Error type
 pub enum Error {
     /// Not a root node error
-    NotARootNode
+    NotARootNode,
 }

@@ -1,7 +1,7 @@
 // mutable iterators are impossible for Node<T> due to borrow checking rules
 use crate::arena::Arena;
-use crate::token::Token;
 use crate::iter::*;
+use crate::token::Token;
 
 /// A node holds data in the arena. `Node<T>` can be accessed by indexing
 /// [`Arena<T>`] with [`Token`], using the [`get`] or [`get_mut`] methods of
@@ -16,23 +16,27 @@ pub struct Node<T> {
     /// The `data` field.
     pub data: T,
     /// The token that refers to the current node.
-    pub (crate) token: Token,
+    pub(crate) token: Token,
     /// The parent node.
-    pub (crate) parent: Option<Token>,
+    pub(crate) parent: Option<Token>,
     /// The "previous sibling" node.
-    pub (crate) previous_sibling: Option<Token>,
+    pub(crate) previous_sibling: Option<Token>,
     /// The "next sibling" node.
-    pub (crate) next_sibling: Option<Token>,
+    pub(crate) next_sibling: Option<Token>,
     /// The "first child" node.
-    pub (crate) first_child: Option<Token>,
+    pub(crate) first_child: Option<Token>,
 }
 
 impl<T> Node<T> {
     /// Returns the token of the given node.
-    pub fn token(&self) -> Token { self.token }
+    pub fn token(&self) -> Token {
+        self.token
+    }
 
     /// Checks whether a given node is actually a leaf.
-    pub fn is_leaf(&self) -> bool { self.first_child.is_none() }
+    pub fn is_leaf(&self) -> bool {
+        self.first_child.is_none()
+    }
 
     /// Returns an iterator of tokens of ancestor nodes.
     ///
@@ -55,8 +59,7 @@ impl<T> Node<T> {
     /// assert_eq!(ancestors_tokens.next(), Some(root_token));
     /// assert!(ancestors_tokens.next().is_none());
     /// ```
-    pub fn ancestors_tokens<'a>(&self, arena: &'a Arena<T>)
-        -> AncestorTokens<'a, T> {
+    pub fn ancestors_tokens<'a>(&self, arena: &'a Arena<T>) -> AncestorTokens<'a, T> {
         self.token.ancestors_tokens(arena)
     }
 
@@ -74,7 +77,9 @@ impl<T> Node<T> {
     /// let root = &arena[root_token];
     /// assert_eq!(root.first_child(), Some(english));
     /// ```
-    pub fn first_child(&self) -> Option<Token> { self.first_child }
+    pub fn first_child(&self) -> Option<Token> {
+        self.first_child
+    }
 
     /// Returns the parent of the node.
     ///
@@ -90,7 +95,9 @@ impl<T> Node<T> {
     /// let child = &arena[english];
     /// assert_eq!(child.parent(), Some(root_token));
     /// ```
-    pub fn parent(&self) -> Option<Token> { self.parent }
+    pub fn parent(&self) -> Option<Token> {
+        self.parent
+    }
 
     /// Returns the previous sibling of the node.
     ///
@@ -107,7 +114,9 @@ impl<T> Node<T> {
     /// let second_child = &arena[swedish];
     /// assert_eq!(second_child.previous_sibling(), Some(english));
     /// ```
-    pub fn previous_sibling(&self) -> Option<Token> { self.previous_sibling }
+    pub fn previous_sibling(&self) -> Option<Token> {
+        self.previous_sibling
+    }
 
     /// Returns the next sibling of the node.
     ///
@@ -124,7 +133,9 @@ impl<T> Node<T> {
     /// let first_child = &arena[english];
     /// assert_eq!(first_child.next_sibling(), Some(swedish));
     /// ```
-    pub fn next_sibling(&self) -> Option<Token> { self.next_sibling }
+    pub fn next_sibling(&self) -> Option<Token> {
+        self.next_sibling
+    }
 
     /// Returns an iterator of tokens of siblings preceding the current node.
     ///
@@ -147,8 +158,10 @@ impl<T> Node<T> {
     /// assert_eq!(sibling_tokens.next(), Some(first_child_token));
     /// assert!(sibling_tokens.next().is_none());
     /// ```
-    pub fn preceding_siblings_tokens<'a>(&self, arena: &'a Arena<T>)
-        -> PrecedingSiblingTokens<'a, T> {
+    pub fn preceding_siblings_tokens<'a>(
+        &self,
+        arena: &'a Arena<T>,
+    ) -> PrecedingSiblingTokens<'a, T> {
         self.token.preceding_siblings_tokens(arena)
     }
 
@@ -173,8 +186,10 @@ impl<T> Node<T> {
     /// assert_eq!(sibling_tokens.next(), Some(fourth_child_token));
     /// assert!(sibling_tokens.next().is_none());
     /// ```
-    pub fn following_siblings_tokens<'a>(&self, arena: &'a Arena<T>)
-        -> FollowingSiblingTokens<'a, T> {
+    pub fn following_siblings_tokens<'a>(
+        &self,
+        arena: &'a Arena<T>,
+    ) -> FollowingSiblingTokens<'a, T> {
         self.token.following_siblings_tokens(arena)
     }
 
@@ -201,8 +216,7 @@ impl<T> Node<T> {
     /// assert_eq!(children_tokens.next(), Some(fourth_child_token));
     /// assert!(children_tokens.next().is_none());
     /// ```
-    pub fn children_tokens<'a>(&self, arena: &'a Arena<T>)
-        -> ChildrenTokens<'a, T> {
+    pub fn children_tokens<'a>(&self, arena: &'a Arena<T>) -> ChildrenTokens<'a, T> {
         self.token.children_tokens(arena)
     }
 
@@ -226,8 +240,7 @@ impl<T> Node<T> {
     /// assert_eq!(ancestors.next().unwrap().data, "Indo-European");
     /// assert!(ancestors.next().is_none());
     /// ```
-    pub fn ancestors<'a>(&self, arena: &'a Arena<T>)
-        -> Ancestors<'a, T> {
+    pub fn ancestors<'a>(&self, arena: &'a Arena<T>) -> Ancestors<'a, T> {
         self.token.ancestors(arena)
     }
 
@@ -253,8 +266,7 @@ impl<T> Node<T> {
     /// assert_eq!(siblings.next().unwrap().data, "Hellenic");
     /// assert!(siblings.next().is_none());
     /// ```
-    pub fn following_siblings<'a>(&self, arena: &'a Arena<T>)
-        -> FollowingSiblings<'a, T> {
+    pub fn following_siblings<'a>(&self, arena: &'a Arena<T>) -> FollowingSiblings<'a, T> {
         self.token.following_siblings(arena)
     }
 
@@ -280,8 +292,7 @@ impl<T> Node<T> {
     /// assert_eq!(siblings.next().unwrap().data, "Romance");
     /// assert!(siblings.next().is_none());
     /// ```
-    pub fn preceding_siblings<'a>(&self, arena: &'a Arena<T>)
-        -> PrecedingSiblings<'a, T> {
+    pub fn preceding_siblings<'a>(&self, arena: &'a Arena<T>) -> PrecedingSiblings<'a, T> {
         self.token.preceding_siblings(arena)
     }
 
@@ -348,8 +359,11 @@ impl<T> Node<T> {
     /// assert_eq!(subtree.next(), Some(second_grandchild));
     /// assert!(subtree.next().is_none());
     /// ```
-    pub fn subtree_tokens<'a>(&self, arena: &'a Arena<T>, order: TraversalOrder)
-        -> SubtreeTokens<'a, T> {
+    pub fn subtree_tokens<'a>(
+        &self,
+        arena: &'a Arena<T>,
+        order: TraversalOrder,
+    ) -> SubtreeTokens<'a, T> {
         self.token.subtree_tokens(arena, order)
     }
 
@@ -382,12 +396,11 @@ impl<T> Node<T> {
     /// assert_eq!(subtree.next().unwrap().data, "Celtic");
     /// assert!(subtree.next().is_none());
     /// ```
-    pub fn subtree<'a>(&self, arena: &'a Arena<T>, order: TraversalOrder)
-        -> Subtree<'a, T> {
+    pub fn subtree<'a>(&self, arena: &'a Arena<T>, order: TraversalOrder) -> Subtree<'a, T> {
         self.token.subtree(arena, order)
     }
 
-    pub (crate) fn remove_descendants(&mut self, arena: &mut Arena<T>) {
+    pub(crate) fn remove_descendants(&mut self, arena: &mut Arena<T>) {
         self.token.remove_descendants(arena)
     }
 }
@@ -400,14 +413,14 @@ mod test {
     fn subtree_tokens_postord() {
         let root_data = 1usize;
         let (mut arena, root_token) = Arena::with_data(root_data);
-       
+
         let first_child = root_token.append(&mut arena, 2usize);
         let second_child = root_token.append(&mut arena, 3usize);
         let third_child = root_token.append(&mut arena, 4usize);
         let first_grandchild = second_child.append(&mut arena, 10usize);
         let second_grandchild = second_child.append(&mut arena, 20usize);
         let fourth_child = root_token.append(&mut arena, 5usize);
-       
+
         let root = &arena[root_token];
         let mut subtree = root.subtree_tokens(&arena, TraversalOrder::Post);
         assert_eq!(subtree.next(), Some(first_child));
@@ -418,7 +431,7 @@ mod test {
         assert_eq!(subtree.next(), Some(fourth_child));
         assert_eq!(subtree.next(), Some(root_token));
         assert!(subtree.next().is_none());
-       
+
         let second_child_node = &arena[second_child];
         let mut subtree = second_child_node.subtree_tokens(&arena, TraversalOrder::Post);
         assert_eq!(subtree.next(), Some(first_grandchild));
@@ -431,14 +444,14 @@ mod test {
     fn subtree_postord() {
         let root_data = "Indo-European";
         let (mut arena, root_token) = Arena::with_data(root_data);
-       
+
         root_token.append(&mut arena, "Romance");
         root_token.append(&mut arena, "Germanic");
         let third_child = root_token.append(&mut arena, "Celtic");
         root_token.append(&mut arena, "Slavic");
         third_child.append(&mut arena, "Ulster");
         third_child.append(&mut arena, "Gaulish");
-       
+
         let root = &arena[root_token];
         let mut subtree = root.subtree(&arena, TraversalOrder::Post);
         assert_eq!(subtree.next().unwrap().data, "Romance");
@@ -455,14 +468,14 @@ mod test {
     fn subtree_tokens_levelord() {
         let root_data = 1usize;
         let (mut arena, root_token) = Arena::with_data(root_data);
-       
+
         let first_child = root_token.append(&mut arena, 2usize);
         let second_child = root_token.append(&mut arena, 3usize);
         let third_child = root_token.append(&mut arena, 4usize);
         let first_grandchild = second_child.append(&mut arena, 10usize);
         let second_grandchild = second_child.append(&mut arena, 20usize);
         let fourth_child = root_token.append(&mut arena, 5usize);
-       
+
         let root = &arena[root_token];
         let mut subtree = root.subtree_tokens(&arena, TraversalOrder::Level);
         assert_eq!(subtree.next(), Some(root_token));
@@ -479,14 +492,14 @@ mod test {
     fn subtree_levelord() {
         let root_data = "Indo-European";
         let (mut arena, root_token) = Arena::with_data(root_data);
-       
+
         root_token.append(&mut arena, "Romance");
         root_token.append(&mut arena, "Germanic");
         let third_child = root_token.append(&mut arena, "Slavic");
         root_token.append(&mut arena, "Hellenic");
         third_child.append(&mut arena, "Russian");
         third_child.append(&mut arena, "Ukrainian");
-       
+
         let root = &arena[root_token];
         let mut subtree = root.subtree(&arena, TraversalOrder::Level);
         assert_eq!(subtree.next().unwrap().data, "Indo-European");

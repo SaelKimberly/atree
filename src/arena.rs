@@ -12,12 +12,16 @@ use crate::token::Token;
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Arena<T> {
-    pub (crate) allocator: Allocator<Node<T>>
+    pub(crate) allocator: Allocator<Node<T>>,
 }
 
 impl<T> Arena<T> {
     /// Initializes a new `Arena<T>`.
-    pub fn new() -> Self { Arena { allocator: Allocator::new() } }
+    pub fn new() -> Self {
+        Arena {
+            allocator: Allocator::new(),
+        }
+    }
 
     /// Returns true if the arena is empty.
     ///
@@ -33,7 +37,9 @@ impl<T> Arena<T> {
     /// arena.new_node(root_data);
     /// assert!(!arena.is_empty());
     /// ```
-    pub fn is_empty(&self) -> bool { self.allocator.is_empty() }
+    pub fn is_empty(&self) -> bool {
+        self.allocator.is_empty()
+    }
 
     /// Counts the number of nodes currently in the arena.
     ///
@@ -52,11 +58,14 @@ impl<T> Arena<T> {
     /// next_node_token.append(&mut arena, 3usize);
     /// assert_eq!(arena.node_count(), 3);
     /// ```
-    pub fn node_count(&self) -> usize { self.allocator.len() }
+    pub fn node_count(&self) -> usize {
+        self.allocator.len()
+    }
 
     /// Returns the number of nodes the tree can hold without reallocating.
-    pub fn capacity(&self) -> usize { self.allocator.capacity() }
-
+    pub fn capacity(&self) -> usize {
+        self.allocator.capacity()
+    }
 
     /// Initializes arena and initializes a new tree with the given data at the
     /// root node.
@@ -75,9 +84,11 @@ impl<T> Arena<T> {
             data,
             parent: None,
             previous_sibling: None,
-            token: Token { index: NonZeroUsize::new(1).unwrap() },
+            token: Token {
+                index: NonZeroUsize::new(1).unwrap(),
+            },
             next_sibling: None,
-            first_child: None
+            first_child: None,
         };
         let mut allocator = Allocator::new();
         let root_token = allocator.insert(root_node);
@@ -106,7 +117,7 @@ impl<T> Arena<T> {
             previous_sibling: None,
             token,
             next_sibling: None,
-            first_child: None
+            first_child: None,
         };
         self.allocator.set(token, node);
         token
@@ -152,7 +163,7 @@ impl<T> Arena<T> {
     }
 
     /// Sets data to node.
-    pub (crate) fn set(&mut self, indx: Token, node: Node<T>) {
+    pub(crate) fn set(&mut self, indx: Token, node: Node<T>) {
         if let Some(mut n) = self.allocator.set(indx, node) {
             n.remove_descendants(self)
         }
@@ -209,7 +220,10 @@ impl<T> Arena<T> {
         // should not fail because children_mut checks the validity of token
         let first_child = self[token].first_child;
         self.allocator.remove(token);
-        let iter = ChildrenTokens { arena: self, node_token: first_child };
+        let iter = ChildrenTokens {
+            arena: self,
+            node_token: first_child,
+        };
         iter.collect()
     }
 
@@ -233,7 +247,7 @@ impl<T> Arena<T> {
     /// let next_node = root_token.append(&mut arena, 2usize);
     /// let nnext_node1 = next_node.append(&mut arena, 3usize);
     /// let nnext_node2 = next_node.append(&mut arena, 4usize);
-    /// 
+    ///
     /// arena.uproot(next_node);
     /// let mut iter = root_token.subtree_tokens(&arena, TraversalOrder::Pre);
     /// assert_eq!(iter.next(), Some(root_token));
@@ -246,40 +260,42 @@ impl<T> Arena<T> {
         token.remove_descendants(self);
         match self.allocator.remove(token) {
             None => panic!("Invalid token"),
-            Some(node) => match (node.parent, node.previous_sibling,
-                                 node.next_sibling) {
+            Some(node) => match (node.parent, node.previous_sibling, node.next_sibling) {
                 (Some(_), Some(otkn), Some(ytkn)) => {
                     match self.get_mut(otkn) {
                         Some(o) => o.next_sibling = Some(ytkn),
-                        None => panic!("Corrupt arena")
+                        None => panic!("Corrupt arena"),
                     }
                     match self.get_mut(ytkn) {
                         Some(y) => y.previous_sibling = Some(otkn),
-                        None => panic!("Corrupt arena")
+                        None => panic!("Corrupt arena"),
                     }
-                },
+                }
                 (Some(_), Some(otkn), None) => match self.get_mut(otkn) {
                     Some(o) => o.next_sibling = None,
-                    None => panic!("Corrupt arena")
+                    None => panic!("Corrupt arena"),
                 },
                 (Some(ptkn), None, Some(ytkn)) => match self.get_mut(ptkn) {
                     Some(p) => p.first_child = Some(ytkn),
-                    None => panic!("Corrupt arena")
+                    None => panic!("Corrupt arena"),
                 },
                 (Some(ptkn), None, None) => match self.get_mut(ptkn) {
                     Some(p) => p.first_child = None,
-                    None => panic!("Corrupt arena")
+                    None => panic!("Corrupt arena"),
                 },
-                (None, None, None) => (),  // empty tree
-                (None, None, Some(_))
-                    | (None, Some(_), None)
-                    | (None, Some(_), Some(_)) => panic!("Corrupt arena")
-            }
+                (None, None, None) => (), // empty tree
+                (None, None, Some(_)) | (None, Some(_), None) | (None, Some(_), Some(_)) => {
+                    panic!("Corrupt arena")
+                }
+            },
         }
     }
 }
 
-impl<T> Arena<T> where T: Clone {
+impl<T> Arena<T>
+where
+    T: Clone,
+{
     /// Moves subtree with the root at the given node into its own arena. To
     /// detach a given subtree root node from a tree into its own while
     /// remaining in the same arena, use [`detach`] instead.
@@ -315,10 +331,13 @@ impl<T> Arena<T> where T: Clone {
     ///
     /// [`detach`]: struct.Token.html#method.detach
     // TODO: could probably be optimized
-    pub fn split_at(&mut self, token: Token) -> (Self, Token) where T: Clone {
+    pub fn split_at(&mut self, token: Token) -> (Self, Token)
+    where
+        T: Clone,
+    {
         let root_data = match self.get(token) {
             Some(node) => node.data.clone(),
-            None => panic!("Invalid token")
+            None => panic!("Invalid token"),
         };
         let (mut arena, root) = Arena::with_data(root_data);
         for child_token in token.children_tokens(self) {
@@ -362,8 +381,12 @@ impl<T> Arena<T> where T: Clone {
     /// assert_eq!(subtree.next().unwrap().data, "Ivan");
     /// assert!(subtree.next().is_none());
     /// ```
-    pub fn copy_and_append_subtree(&mut self, self_token: Token,
-                                   other_tree: &Arena<T>, other_token: Token) {
+    pub fn copy_and_append_subtree(
+        &mut self,
+        self_token: Token,
+        other_tree: &Arena<T>,
+        other_token: Token,
+    ) {
         match other_tree.get(other_token) {
             None => panic!("Invalid token"),
             Some(node) => {
@@ -376,19 +399,18 @@ impl<T> Arena<T> where T: Clone {
 
                 loop {
                     let &token = stack.last().unwrap(); // never fails
-                    let node = &other_tree[token];  // already checked
+                    let node = &other_tree[token]; // already checked
                     match branch {
-                        Branch::None => (),  // unreachable
+                        Branch::None => (), // unreachable
                         Branch::Child => match node.first_child {
                             None => branch = Branch::Sibling,
                             Some(child) => {
                                 let child_data = match other_tree.get(child) {
                                     Some(node) => node.data.clone(),
-                                    None => panic!("Corrupt arena")
+                                    None => panic!("Corrupt arena"),
                                 };
                                 let new_parent = index_map[&token];
-                                let new_child_token =
-                                    new_parent.append(self, child_data);
+                                let new_child_token = new_parent.append(self, child_data);
                                 index_map.insert(child, new_child_token);
                                 stack.push(child);
                             }
@@ -401,8 +423,8 @@ impl<T> Arena<T> where T: Clone {
                                     stack.push(sibling);
                                     branch = Branch::Child;
                                 }
-                            }
-                        }
+                            },
+                        },
                     }
                 }
             }
@@ -415,7 +437,7 @@ impl<T> Index<Token> for Arena<T> {
     fn index(&self, index: Token) -> &Self::Output {
         match self.get(index) {
             Some(node) => node,
-            None => panic!("Invalid token")
+            None => panic!("Invalid token"),
         }
     }
 }
@@ -424,7 +446,7 @@ impl<T> IndexMut<Token> for Arena<T> {
     fn index_mut(&mut self, index: Token) -> &mut Self::Output {
         match self.get_mut(index) {
             Some(node) => node,
-            None => panic!("Invalid token")
+            None => panic!("Invalid token"),
         }
     }
 }
