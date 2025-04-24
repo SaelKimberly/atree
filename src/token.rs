@@ -1048,9 +1048,9 @@ impl Token {
         order: TraversalOrder,
     ) -> SubtreeTokens<'a, T> {
         let preord_tokens_next =
-            |iter: &mut SubtreeTokens<T>| depth_first_tokens_next(iter, preorder_next);
+            |iter: &mut SubtreeTokens<'a, T>| depth_first_tokens_next(iter, preorder_next);
         let postord_tokens_next =
-            |iter: &mut SubtreeTokens<T>| depth_first_tokens_next(iter, postorder_next);
+            |iter: &mut SubtreeTokens<'a, T>| depth_first_tokens_next(iter, postorder_next);
         match order {
             TraversalOrder::Pre => SubtreeTokens {
                 arena,

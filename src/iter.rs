@@ -187,7 +187,7 @@ pub struct SubtreeTokens<'a, T> {
     pub(crate) branch: Branch,
     pub(crate) curr_level: VecDeque<Token>,
     pub(crate) next_level: VecDeque<Token>,
-    pub(crate) next: fn(&mut SubtreeTokens<T>) -> Option<Token>,
+    pub(crate) next: fn(&mut SubtreeTokens<'a, T>) -> Option<Token>,
 }
 
 impl<'a, T> Iterator for SubtreeTokens<'a, T> {
