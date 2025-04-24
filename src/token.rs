@@ -842,7 +842,7 @@ impl Token {
         AncestorsMut {
             arena: arena as *mut Arena<T>,
             node_token: Some(self),
-            marker: PhantomData::default()
+            marker: PhantomData
         }
     }
 
@@ -886,7 +886,7 @@ impl Token {
         FollowingSiblingsMut {
             arena: arena as *mut Arena<T>,
             node_token: next_sibling,
-            marker: PhantomData::default()
+            marker: PhantomData
         }
     }
 
@@ -930,7 +930,7 @@ impl Token {
         PrecedingSiblingsMut {
             arena: arena as *mut Arena<T>,
             node_token: previous_sibling,
-            marker: PhantomData::default()
+            marker: PhantomData
         }
     }
 
@@ -976,7 +976,7 @@ impl Token {
         ChildrenMut {
             arena: arena as *mut Arena<T>,
             node_token: first_child,
-            marker: PhantomData::default()
+            marker: PhantomData
         }
     }
 
@@ -1141,7 +1141,7 @@ impl Token {
         SubtreeMut {
             arena: arena as *mut Arena<T>,
             iter: self.subtree_tokens(arena, order),
-            marker: PhantomData::default()
+            marker: PhantomData
         }
     }
 
